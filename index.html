@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PathoWatch: One Health Surveillance</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; }
+        h2 { color: #2c3e50; margin-bottom: 10px; }
+        
+        #map { 
+            height: 650px; 
+            width: 100%; 
+            border-radius: 15px; 
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15); 
+            border: 2px solid #ffffff;
+        }
+
+        .controls { margin-bottom: 15px; display: flex; gap: 10px; }
+        
+        button {
+            padding: 12px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover { background-color: #2980b9; transform: translateY(-1px); }
+
+        /* Increased width to fit the 3-disease table nicely */
+        .popup-container { min-width: 260px; padding: 5px; }
+        .veg-title { color: #27ae60; }
+        .human-title { color: #2980b9; }
+        
+        .risk-row { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .risk-row:last-child { border-bottom: none; }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .bg-red { background-color: #e74c3c; }
+        .bg-yellow { background-color: #f1c40f; color: #2c3e50; }
+        .bg-green { background-color: #2ecc71; }
+
+        .legend {
+            background: white;
+            padding: 10px;
+            line-height: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+        .legend i { width: 14px; height: 14px; float: left; margin: 3px 8px 0 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <h2>PathoWatch Unified Analysis</h2>
+    <div class="controls">
+        <button type="button" onclick="runModel()">🛰️ Update Satellite Risk Layer</button>
+    </div>
+    
+    <div id="map"></div>
+
+<script>
+    var map = L.map('map', {
+        center: [28.6139, 77.2090],
+        zoom: 11,
+        zoomControl: true,
+        scrollWheelZoom: true
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    var riskLayer;
+    const SERVER_URL = "http://127.0.0.1:5000";
+
+    function runModel() {
+        fetch(`${SERVER_URL}/run_model`)
+            .then(res => res.json())
+            .then(data => { 
+                console.log("Model execution complete");
+                loadRiskMap(); 
+            })
+            .catch(err => alert("Server offline. Ensure server2.py is running."));
+    }
+
+    function loadRiskMap() {
+        if (riskLayer) { map.removeLayer(riskLayer); }
+        var imageUrl = `${SERVER_URL}/risk_map?t=` + new Date().getTime();
+        var bounds = [[28.55, 77.05], [28.75, 77.45]];
+        riskLayer = L.imageOverlay(imageUrl, bounds, { opacity: 0.6, interactive: false });
+        riskLayer.addTo(map);
+    }
+
+    map.on('click', function(e) {
+        var lat = e.latlng.lat;
+        var lon = e.latlng.lng;
+
+        Promise.all([
+            fetch(`${SERVER_URL}/risk_at_location?lat=${lat}&lon=${lon}`).then(res => res.json()),
+            fetch(`${SERVER_URL}/human_risk?lat=${lat}&lon=${lon}`).then(res => res.json())
+        ])
+        .then(([veg, human]) => {
+            let hClass = human.risk_level.includes("HIGH") ? "bg-red" : 
+                         human.risk_level.includes("MEDIUM") ? "bg-yellow" : "bg-green";
+
+            L.popup({ autoPan: true }) 
+                .setLatLng([lat, lon])
+                .setContent(`
+        <div class="popup-container">
+            <div class="risk-row">
+                <b class="veg-title">🌿 Vegetation Pathogen Analysis</b><br>
+                Risk: <b>${veg.veg_risk || "N/A"}</b> | Prob: <b>${(veg.veg_prob * 100).toFixed(1)}%</b>
+            </div>
+            <hr>
+            <div class="risk-row">
+                <b class="human-title">👤 Disease Probability Index</b><br>
+                Overall Status: <span class="badge ${hClass}">${human.risk_level}</span>
+                
+                <table style="width:100%; font-size:11px; margin-top:8px; border-collapse: collapse;">
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <th align="left">Disease Type</th>
+                        <th align="right">Prob.</th>
+                    </tr>
+                    <tr>
+                        <td>Vector (Malaria/Dengue)</td>
+                        <td align="right"><b>${human.diseases.malaria_dengue}%</b></td>
+                    </tr>
+                    <tr>
+                        <td>Respiratory (Flu/Asthma)</td>
+                        <td align="right"><b>${human.diseases.respiratory}%</b></td>
+                    </tr>
+                    <tr>
+                        <td>Water-borne (Cholera)</td>
+                        <td align="right"><b>${human.diseases.cholera_typhoid}%</b></td>
+                    </tr>
+                </table>
+
+                <div style="background: #f9f9f9; padding: 7px; border-radius: 5px; margin-top: 8px; font-size: 10px; line-height: 1.4;">
+                    <b style="color:#7f8c8d">Live vs. Ideal Conditions:</b><br>
+                    AQI: <b>${human.data.aqi}</b> (Ideal: ${human.ideals.aqi})<br>
+                    Temp: <b>${human.data.temp}°C</b> (Ideal: ${human.ideals.temp})<br>
+                    Hum: <b>${human.data.humidity}%</b> (Ideal: ${human.ideals.hum})<br>
+                    <b>Rainfall(7-Day data): <span style="color:#2980b9">${human.data.weekly_rain} mm</span></b>
+                </div>
+            </div>
+        </div>
+    `)
+                .openOn(map);
+        })
+        .catch(err => console.error("Data Fetch Error:", err));
+    });
+
+    var legend = L.control({position: 'bottomright'});
+    legend.onAdd = function (map) {
+        var div = L.DomUtil.create('div', 'legend');
+        div.innerHTML += '<b>Risk Level</b><br>';
+        div.innerHTML += '<i style="background: #e74c3c"></i> High<br>';
+        div.innerHTML += '<i style="background: #f1c40f"></i> Medium<br>';
+        div.innerHTML += '<i style="background: #2ecc71"></i> Low<br>';
+        return div;
+    };
+    legend.addTo(map);
+</script>
+</body>
+</html>
