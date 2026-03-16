@@ -1,0 +1,11 @@
+flask
+flask-cors
+rasterio
+numpy
+scikit-learn
+matplotlib
+scipy
+requests
+python-dotenv
+earthengine-api
+geemap

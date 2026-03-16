@@ -3,15 +3,12 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # MUST be before pyplot import
 import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
 import requests
 import os
 from dotenv import load_dotenv
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from scipy.ndimage import gaussian_filter
-from datetime import datetime, timedelta
-from meteostat import Point, daily 
 
 # ---------------------------
 # Secure API Configuration
@@ -77,19 +74,18 @@ def train_model(features, ndvi):
 # ---------------------------
 def get_human_environmental_risk(lat, lon):
     try:
-        # 1. Fetch Rainfall with NoneType Guard
+        # 1. Fetch Rainfall via OWM forecast (cnt=16 = 48hrs of 3hr slots)
+        # Meteostat replaced: 1-2 day lag + empty results for India
         try:
-            start = datetime.now() - timedelta(days=7)
-            end = datetime.now()
-            location = Point(lat, lon)
-            rain_data = daily(location, start, end).fetch()
-            
-            if rain_data is not None and not rain_data.empty:
-                weekly_rain = round(float(rain_data['prcp'].sum()), 1)
-            else:
-                weekly_rain = 0.0
-                
-            if np.isnan(weekly_rain): weekly_rain = 0.0
+            forecast_url = (
+                f"https://api.openweathermap.org/data/2.5/forecast"
+                f"?lat={lat}&lon={lon}&appid={WEATHER_KEY}&units=metric&cnt=16"
+            )
+            forecast_data = requests.get(forecast_url, timeout=10).json()
+            weekly_rain = round(sum(
+                slot.get("rain", {}).get("3h", 0.0)
+                for slot in forecast_data.get("list", [])
+            ), 1)
         except:
             weekly_rain = 0.0
 

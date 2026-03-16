@@ -1,178 +1,820 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>PathoWatch: One Health Surveillance</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; }
-        h2 { color: #2c3e50; margin-bottom: 10px; }
-        
-        #map { 
-            height: 650px; 
-            width: 100%; 
-            border-radius: 15px; 
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15); 
-            border: 2px solid #ffffff;
-        }
+  <meta charset="UTF-8" />
+  <title>PathoWatch Risk Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;500;700&display=swap" rel="stylesheet">
 
-        .controls { margin-bottom: 15px; display: flex; gap: 10px; }
-        
-        button {
-            padding: 12px 20px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        button:hover { background-color: #2980b9; transform: translateY(-1px); }
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --panel: #0f1520;
+      --border: #1e2d45;
+      --accent: #00e5ff;
+      --danger: #ff3d57;
+      --warn: #ffb300;
+      --safe: #00e676;
+      --text: #c8d8e8;
+      --dim: #4a6080;
+      --mono: 'Share Tech Mono', monospace;
+      --body: 'Barlow', sans-serif;
+    }
 
-        /* Increased width to fit the 3-disease table nicely */
-        .popup-container { min-width: 260px; padding: 5px; }
-        .veg-title { color: #27ae60; }
-        .human-title { color: #2980b9; }
-        
-        .risk-row { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
-        .risk-row:last-child { border-bottom: none; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .bg-red { background-color: #e74c3c; }
-        .bg-yellow { background-color: #f1c40f; color: #2c3e50; }
-        .bg-green { background-color: #2ecc71; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-        .legend {
-            background: white;
-            padding: 10px;
-            line-height: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            font-size: 12px;
-        }
-        .legend i { width: 14px; height: 14px; float: left; margin: 3px 8px 0 0; border-radius: 3px; }
-    </style>
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,229,255,0.015) 2px, rgba(0,229,255,0.015) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .logo { display: flex; align-items: center; gap: 12px; }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,229,255,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(0,229,255,0); }
+    }
+
+    .logo h1 { font-family: var(--mono); font-size: 20px; color: var(--accent); letter-spacing: 3px; }
+    .logo span { font-size: 11px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; font-weight: 300; }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--safe); animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .status-text { font-family: var(--mono); font-size: 11px; color: var(--dim); letter-spacing: 1px; }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 2px;
+      padding: 10px 22px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--accent);
+      transform: translateX(-100%);
+      transition: transform 0.2s;
+      z-index: -1;
+    }
+
+    .btn:hover { color: var(--bg); }
+    .btn:hover::before { transform: translateX(0); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-danger { border-color: var(--danger); color: var(--danger); }
+    .btn-danger::before { background: var(--danger); }
+    .btn-danger:hover { color: var(--bg); }
+
+    .coord-input-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 28px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .coord-input-bar label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .coord-input-group { display: flex; align-items: center; gap: 8px; }
+
+    .coord-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 8px 14px;
+      width: 150px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .coord-input:focus { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(0,229,255,0.2); }
+    .coord-input::placeholder { color: var(--dim); font-size: 12px; }
+    .coord-input-bar .divider { width: 1px; height: 32px; background: var(--border); margin: 0 4px; }
+    .input-hint { font-size: 11px; color: var(--dim); letter-spacing: 1px; margin-left: auto; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      height: calc(100vh - 117px);
+    }
+
+    .map-panel { position: relative; border-right: 1px solid var(--border); }
+    #map { height: 100%; width: 100%; background: #060d18; }
+
+    .map-label {
+      position: absolute; top: 12px; left: 12px; z-index: 1000;
+      background: rgba(10,14,20,0.85); border: 1px solid var(--border);
+      padding: 6px 12px; font-family: var(--mono); font-size: 10px;
+      color: var(--dim); letter-spacing: 2px; text-transform: uppercase;
+    }
+
+    .map-hint {
+      position: absolute; bottom: 12px; left: 50%;
+      transform: translateX(-50%); z-index: 1000;
+      background: rgba(10,14,20,0.9); border: 1px solid var(--border);
+      padding: 8px 16px; font-size: 12px; color: var(--dim);
+      letter-spacing: 1px; white-space: nowrap;
+    }
+
+    .side-panel { display: flex; flex-direction: column; background: var(--panel); overflow-y: auto; }
+    .panel-section { padding: 20px; border-bottom: 1px solid var(--border); }
+
+    .section-title {
+      font-family: var(--mono); font-size: 10px; color: var(--dim);
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .risk-display { text-align: center; padding: 16px 0; }
+
+    .risk-value {
+      font-family: var(--mono); font-size: 48px; font-weight: bold;
+      line-height: 1; margin-bottom: 6px; transition: color 0.3s;
+    }
+
+    .risk-label { font-size: 13px; letter-spacing: 4px; text-transform: uppercase; font-weight: 300; }
+
+    .risk-bar-wrap { margin-top: 16px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .risk-bar { height: 100%; width: 0%; transition: width 0.8s ease, background 0.3s; border-radius: 2px; }
+
+    .coords-display { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .coord-box { background: var(--bg); border: 1px solid var(--border); padding: 10px 14px; }
+    .coord-box label { display: block; font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 2px; margin-bottom: 4px; }
+    .coord-box span { font-family: var(--mono); font-size: 14px; color: var(--accent); }
+
+    .alert-box {
+      padding: 12px 16px; border-left: 3px solid var(--dim);
+      background: rgba(255,255,255,0.03); font-size: 13px;
+      color: var(--text); font-weight: 300; min-height: 44px; transition: border-color 0.3s;
+    }
+
+    /* ── Disease Probability Panel ── */
+    .disease-table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--mono); font-size: 11px;
+    }
+    .disease-table th {
+      color: var(--dim); font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase; padding: 0 0 8px 0; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .disease-table th:last-child { text-align: right; }
+    .disease-table td { padding: 7px 0; color: var(--text); font-size: 11px; border-bottom: 1px solid rgba(30,45,69,0.5); }
+    .disease-table td:last-child { text-align: right; }
+
+    .prob-bar-wrap { height: 3px; background: var(--border); border-radius: 2px; margin-top: 3px; }
+    .prob-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+
+    .env-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 6px; margin-top: 12px;
+    }
+    .env-box {
+      background: var(--bg); border: 1px solid var(--border);
+      padding: 8px 10px;
+    }
+    .env-box .e-label { font-family: var(--mono); font-size: 8px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+    .env-box .e-val   { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-top: 2px; }
+    .env-box .e-ideal { font-size: 9px; color: var(--dim); margin-top: 1px; }
+
+    .human-risk-badge {
+      display: inline-block; padding: 3px 12px;
+      font-family: var(--mono); font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; border-radius: 2px; margin-bottom: 12px;
+    }
+    .badge-high   { background: rgba(255,61,87,0.15);  color: var(--danger); border: 1px solid var(--danger); }
+    .badge-medium { background: rgba(255,179,0,0.15);  color: var(--warn);   border: 1px solid var(--warn);   }
+    .badge-low    { background: rgba(0,230,118,0.15);  color: var(--safe);   border: 1px solid var(--safe);   }
+
+    /* ── Recommendations Panel ── */
+    .rec-card {
+      border-left: 2px solid var(--dim);
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      background: rgba(255,255,255,0.02);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+    .rec-card.high   { border-left-color: var(--danger); }
+    .rec-card.medium { border-left-color: var(--warn);   }
+    .rec-card.low    { border-left-color: var(--safe);   }
+    .rec-card .rec-title {
+      font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+      margin-bottom: 5px; text-transform: uppercase;
+    }
+    .rec-card.high   .rec-title { color: var(--danger); }
+    .rec-card.medium .rec-title { color: var(--warn);   }
+    .rec-card.low    .rec-title { color: var(--safe);   }
+    .rec-card ul { padding-left: 14px; color: var(--text); }
+    .rec-card ul li { margin-bottom: 2px; }
+
+    .chart-wrap { position: relative; height: 200px; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .stat-box { background: var(--bg); border: 1px solid var(--border); padding: 12px; text-align: center; }
+    .stat-box .val { font-family: var(--mono); font-size: 20px; font-weight: bold; display: block; }
+    .stat-box .lbl { font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-top: 4px; display: block; }
+
+    .val.high { color: var(--danger); }
+    .val.med  { color: var(--warn); }
+    .val.low  { color: var(--safe); }
+
+    .loading-overlay {
+      display: none; position: absolute; inset: 0;
+      background: rgba(10,14,20,0.85); z-index: 2000;
+      align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+    }
+    .loading-overlay.active { display: flex; }
+
+    .spinner {
+      width: 40px; height: 40px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { font-family: var(--mono); font-size: 12px; color: var(--accent); letter-spacing: 3px; }
+
+    .empty-state {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; color: var(--dim);
+    }
+    .empty-state .icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+    .empty-state p { font-size: 12px; letter-spacing: 1px; line-height: 1.8; text-align: center; }
+
+    /* human panel empty state */
+    .human-empty {
+      text-align: center; padding: 20px 0;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--dim); letter-spacing: 1px;
+    }
+    .leaflet-top.leaflet-left {
+  top: 50px;
+}
+  </style>
 </head>
 <body>
 
-    <h2>PathoWatch Unified Analysis</h2>
-    <div class="controls">
-        <button type="button" onclick="runModel()">🛰️ Update Satellite Risk Layer</button>
+<header>
+  <div class="logo">
+    <div class="logo-icon">🦠</div>
+    <div>
+      <h1>PATHOWATCH</h1>
+      <span>Pathogen Risk Intelligence</span>
     </div>
-    
+  </div>
+  <div class="header-right">
+    <div class="status-dot"></div>
+    <span class="status-text" id="statusText">SYSTEM READY</span>
+    <button class="btn" onclick="runModel()" id="genBtn">▶ Generate Risk Map</button>
+  </div>
+</header>
+
+<div class="coord-input-bar">
+  <div class="coord-input-group">
+    <label>Latitude</label>
+    <input class="coord-input" id="inputLat" type="number" step="0.0001" placeholder="e.g. 30.9000" />
+  </div>
+  <div class="divider"></div>
+  <div class="coord-input-group">
+    <label>Longitude</label>
+    <input class="coord-input" id="inputLon" type="number" step="0.0001" placeholder="e.g. 75.8500" />
+  </div>
+  <button class="btn" onclick="analyzeFromInput()">⊕ Analyze Location</button>
+  <button class="btn btn-danger" onclick="clearAll()">✕ Clear</button>
+  <span class="input-hint">or click directly on map ↓</span>
+</div>
+
+<div class="dashboard">
+
+  <div class="map-panel">
+    <div class="map-label">LIVE SATELLITE OVERLAY</div>
     <div id="map"></div>
+    <div class="map-hint">🖱 Click map or enter coordinates above</div>
+    <div class="loading-overlay" id="mapLoader">
+      <div class="spinner"></div>
+      <div class="loading-text">RUNNING PIPELINE...</div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+
+    <!-- 1. Risk Assessment (original) -->
+    <div class="panel-section">
+      <div class="section-title">VEGETATION RISK ASSESSMENT</div>
+      <div class="risk-display">
+        <div class="risk-value" id="riskValue" style="color:var(--dim)">—</div>
+        <div class="risk-label" id="riskLabel" style="color:var(--dim)">Enter coordinates or click map</div>
+        <div class="risk-bar-wrap">
+          <div class="risk-bar" id="riskBar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Selected Location (original) -->
+    <div class="panel-section">
+      <div class="section-title">Selected Location</div>
+      <div class="coords-display">
+        <div class="coord-box">
+          <label>Latitude</label>
+          <span id="dispLat">—</span>
+        </div>
+        <div class="coord-box">
+          <label>Longitude</label>
+          <span id="dispLon">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Alert (original) -->
+    <div class="panel-section">
+      <div class="section-title">Alert</div>
+      <div class="alert-box" id="alertBox">Awaiting location selection...</div>
+    </div>
+
+    <!-- 4. Weekly Chart -->
+    <div class="panel-section" style="flex:1">
+      <div class="section-title">Weekly Concentration Trend</div>
+      <div class="chart-wrap">
+        <canvas id="riskChart"></canvas>
+        <div class="empty-state" id="chartEmpty">
+          <div class="icon">📈</div>
+          <p>Enter coordinates above<br>or click a location on the map</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Risk Distribution (original) -->
+    <div class="panel-section">
+      <div class="section-title">Risk Distribution</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="val high" id="statHigh">—</span>
+          <span class="lbl">High Risk</span>
+        </div>
+        <div class="stat-box">
+          <span class="val med" id="statMed">—</span>
+          <span class="lbl">Medium</span>
+        </div>
+        <div class="stat-box">
+          <span class="val low" id="statLow">—</span>
+          <span class="lbl">Low Risk</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Human Disease Probability Index -->
+    <div class="panel-section" id="humanSection">
+      <div class="section-title">HUMAN DISEASE PROBABILITY INDEX</div>
+      <div id="humanContent">
+        <div class="human-empty">Select a location to load<br>disease risk data</div>
+      </div>
+    </div>
+
+    <!-- 7. Recommendations -->
+    <div class="panel-section" id="recsSection">
+      <div class="section-title">Recommended Actions</div>
+      <div id="recsContent">
+        <div class="human-empty">Recommendations will appear<br>after location analysis</div>
+      </div>
+    </div>
+
+    
+
+  </div>
+</div>
 
 <script>
-    var map = L.map('map', {
-        center: [28.6139, 77.2090],
-        zoom: 11,
-        zoomControl: true,
-        scrollWheelZoom: true
-    });
+  var map = L.map('map').setView([28.6139, 77.2090], 11);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    className: 'map-tiles'
+  }).addTo(map);
+
+  var s = document.createElement('style');
+  s.textContent = '.map-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.85) saturate(0.7); }';
+  document.head.appendChild(s);
+
+  var riskLayer, chart, currentMarker;
+
+  document.getElementById('inputLat').addEventListener('keydown', function(e) { if (e.key === 'Enter') analyzeFromInput(); });
+  document.getElementById('inputLon').addEventListener('keydown', function(e) { if (e.key === 'Enter') analyzeFromInput(); });
+
+  function analyzeFromInput() {
+    var lat = parseFloat(document.getElementById('inputLat').value);
+    var lon = parseFloat(document.getElementById('inputLon').value);
+    if (isNaN(lat) || isNaN(lon)) {
+      document.getElementById('alertBox').textContent = '⚠ Please enter valid latitude and longitude values.';
+      document.getElementById('alertBox').style.borderLeftColor = 'var(--warn)';
+      return;
+    }
+    if (lat < -90 || lat > 90) {
+      document.getElementById('alertBox').textContent = '⚠ Latitude must be between -90 and 90.';
+      return;
+    }
+    if (lon < -180 || lon > 180) {
+      document.getElementById('alertBox').textContent = '⚠ Longitude must be between -180 and 180.';
+      return;
+    }
+    map.flyTo([lat, lon], 12, { duration: 1.2 });
+    analyzeLocation(lat, lon);
+  }
+
+  map.on('click', function(e) {
+    var lat = e.latlng.lat;
+    var lon = e.latlng.lng;
+    document.getElementById('inputLat').value = lat.toFixed(5);
+    document.getElementById('inputLon').value = lon.toFixed(5);
+    analyzeLocation(lat, lon);
+  });
+
+  function analyzeLocation(lat, lon) {
+    document.getElementById('dispLat').textContent = lat.toFixed(5);
+    document.getElementById('dispLon').textContent = lon.toFixed(5);
+    document.getElementById('alertBox').textContent = 'Fetching satellite data...';
+    document.getElementById('alertBox').style.borderLeftColor = 'var(--dim)';
+    document.getElementById('riskLabel').textContent = 'ANALYZING...';
+    document.getElementById('riskLabel').style.color = 'var(--accent)';
+    document.getElementById('riskValue').textContent = '...';
+    document.getElementById('riskValue').style.color = 'var(--accent)';
+    document.getElementById('humanContent').innerHTML = '<div class="human-empty">Loading disease data...</div>';
+    document.getElementById('recsContent').innerHTML  = '<div class="human-empty">Loading recommendations...</div>';
+
+    if (currentMarker) map.removeLayer(currentMarker);
+    currentMarker = L.circleMarker([lat, lon], {
+      radius: 8, color: '#00e5ff', fillColor: '#00e5ff', fillOpacity: 0.9, weight: 2
     }).addTo(map);
 
-    var riskLayer;
-    const SERVER_URL = "http://127.0.0.1:5000";
-
-    function runModel() {
-        fetch(`${SERVER_URL}/run_model`)
-            .then(res => res.json())
-            .then(data => { 
-                console.log("Model execution complete");
-                loadRiskMap(); 
-            })
-            .catch(err => alert("Server offline. Ensure server2.py is running."));
+    if (riskLayer) {
+      var delta = 0.1;
+      riskLayer.setBounds([[lat - delta, lon - delta], [lat + delta, lon + delta]]);
     }
 
-    function loadRiskMap() {
-        if (riskLayer) { map.removeLayer(riskLayer); }
-        var imageUrl = `${SERVER_URL}/risk_map?t=` + new Date().getTime();
-        var bounds = [[28.55, 77.05], [28.75, 77.45]];
-        riskLayer = L.imageOverlay(imageUrl, bounds, { opacity: 0.6, interactive: false });
-        riskLayer.addTo(map);
-    }
-
-    map.on('click', function(e) {
-        var lat = e.latlng.lat;
-        var lon = e.latlng.lng;
-
-        Promise.all([
-            fetch(`${SERVER_URL}/risk_at_location?lat=${lat}&lon=${lon}`).then(res => res.json()),
-            fetch(`${SERVER_URL}/human_risk?lat=${lat}&lon=${lon}`).then(res => res.json())
-        ])
-        .then(([veg, human]) => {
-            let hClass = human.risk_level.includes("HIGH") ? "bg-red" : 
-                         human.risk_level.includes("MEDIUM") ? "bg-yellow" : "bg-green";
-
-            L.popup({ autoPan: true }) 
-                .setLatLng([lat, lon])
-                .setContent(`
-        <div class="popup-container">
-            <div class="risk-row">
-                <b class="veg-title">🌿 Vegetation Pathogen Analysis</b><br>
-                Risk: <b>${veg.veg_risk || "N/A"}</b> | Prob: <b>${(veg.veg_prob * 100).toFixed(1)}%</b>
-            </div>
-            <hr>
-            <div class="risk-row">
-                <b class="human-title">👤 Disease Probability Index</b><br>
-                Overall Status: <span class="badge ${hClass}">${human.risk_level}</span>
-                
-                <table style="width:100%; font-size:11px; margin-top:8px; border-collapse: collapse;">
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <th align="left">Disease Type</th>
-                        <th align="right">Prob.</th>
-                    </tr>
-                    <tr>
-                        <td>Vector (Malaria/Dengue)</td>
-                        <td align="right"><b>${human.diseases.malaria_dengue}%</b></td>
-                    </tr>
-                    <tr>
-                        <td>Respiratory (Flu/Asthma)</td>
-                        <td align="right"><b>${human.diseases.respiratory}%</b></td>
-                    </tr>
-                    <tr>
-                        <td>Water-borne (Cholera)</td>
-                        <td align="right"><b>${human.diseases.cholera_typhoid}%</b></td>
-                    </tr>
-                </table>
-
-                <div style="background: #f9f9f9; padding: 7px; border-radius: 5px; margin-top: 8px; font-size: 10px; line-height: 1.4;">
-                    <b style="color:#7f8c8d">Live vs. Ideal Conditions:</b><br>
-                    AQI: <b>${human.data.aqi}</b> (Ideal: ${human.ideals.aqi})<br>
-                    Temp: <b>${human.data.temp}°C</b> (Ideal: ${human.ideals.temp})<br>
-                    Hum: <b>${human.data.humidity}%</b> (Ideal: ${human.ideals.hum})<br>
-                    <b>Rainfall(7-Day data): <span style="color:#2980b9">${human.data.weekly_rain} mm</span></b>
-                </div>
-            </div>
-        </div>
-    `)
-                .openOn(map);
-        })
-        .catch(err => console.error("Data Fetch Error:", err));
+    // Fire both requests in parallel
+    Promise.all([
+      fetch(`http://localhost:5000/analyze_dynamic_location?lat=${lat}&lon=${lon}`).then(r => r.json()),
+      fetch(`http://localhost:5000/human_risk?lat=${lat}&lon=${lon}`).then(r => r.json())
+    ])
+    .then(([veg, human]) => {
+      updateRiskDisplay(veg);
+      updateChart(veg.days, veg.values);
+      updateHumanPanel(human);
+    })
+    .catch(() => {
+      document.getElementById('alertBox').textContent = '⚠ Error fetching data. Is server running?';
+      document.getElementById('alertBox').style.borderLeftColor = 'var(--danger)';
+      document.getElementById('riskLabel').textContent = 'CONNECTION ERROR';
+      document.getElementById('riskLabel').style.color = 'var(--danger)';
+      document.getElementById('riskValue').textContent = '—';
+      document.getElementById('riskValue').style.color = 'var(--dim)';
+      document.getElementById('humanContent').innerHTML = '<div class="human-empty" style="color:var(--danger)">Server connection failed</div>';
+      document.getElementById('recsContent').innerHTML  = '<div class="human-empty" style="color:var(--danger)">Server connection failed</div>';
     });
+  }
 
-    var legend = L.control({position: 'bottomright'});
-    legend.onAdd = function (map) {
-        var div = L.DomUtil.create('div', 'legend');
-        div.innerHTML += '<b>Risk Level</b><br>';
-        div.innerHTML += '<i style="background: #e74c3c"></i> High<br>';
-        div.innerHTML += '<i style="background: #f1c40f"></i> Medium<br>';
-        div.innerHTML += '<i style="background: #2ecc71"></i> Low<br>';
-        return div;
-    };
-    legend.addTo(map);
+  // ── Human Disease Panel ──────────────────────────────────────────
+  function updateHumanPanel(human) {
+    var risk    = human.risk_level || "LOW";
+    var bClass  = risk === "HIGH" ? "badge-high" : risk === "MEDIUM" ? "badge-medium" : "badge-low";
+    var d       = human.diseases || {};
+    var env     = human.data     || {};
+    var ideals  = human.ideals   || {};
+
+    function probColor(v) {
+      return v >= 70 ? 'var(--danger)' : v >= 40 ? 'var(--warn)' : 'var(--safe)';
+    }
+    function probBarColor(v) {
+      return v >= 70 ? '#ff3d57' : v >= 40 ? '#ffb300' : '#00e676';
+    }
+
+    var rows = [
+      { label: "🦟 Vector (Malaria/Dengue)",    val: d.malaria_dengue  || 0 },
+      { label: "😷 Respiratory (Flu/Asthma)",    val: d.respiratory     || 0 },
+      { label: "💧 Water-borne (Cholera)",        val: d.cholera_typhoid || 0 }
+    ];
+
+    var tableRows = rows.map(r => `
+      <tr>
+        <td>${r.label}</td>
+        <td style="text-align:right; color:${probColor(r.val)}; font-family:var(--mono)">
+          ${r.val}%
+          <div class="prob-bar-wrap">
+            <div class="prob-bar" style="width:${r.val}%; background:${probBarColor(r.val)}"></div>
+          </div>
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('humanContent').innerHTML = `
+      <span class="human-risk-badge ${bClass}">${risk} RISK</span>
+      <table class="disease-table">
+        <thead><tr><th>Disease Type</th><th>Probability</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div class="env-grid">
+        <div class="env-box">
+          <div class="e-label">AQI</div>
+          <div class="e-val">${env.aqi ?? '—'}</div>
+          <div class="e-ideal">Ideal: ${ideals.aqi ?? '< 50'}</div>
+        </div>
+        <div class="env-box">
+          <div class="e-label">Temperature</div>
+          <div class="e-val">${env.temp ?? '—'}°C</div>
+          <div class="e-ideal">Ideal: ${ideals.temp ?? '22-26°C'}</div>
+        </div>
+        <div class="env-box">
+          <div class="e-label">Humidity</div>
+          <div class="e-val">${env.humidity ?? '—'}%</div>
+          <div class="e-ideal">Ideal: ${ideals.hum ?? '40-50%'}</div>
+        </div>
+        <div class="env-box">
+          <div class="e-label">Rainfall (48hr)</div>
+          <div class="e-val" style="color:var(--accent)">${env.weekly_rain ?? 0} mm</div>
+          <div class="e-ideal">Ideal: ${ideals.rain ?? '< 5mm'}</div>
+        </div>
+      </div>`;
+
+    // Recommendations
+    document.getElementById('recsContent').innerHTML = getRecommendations(d, env);
+  }
+
+  // ── Recommendations ──────────────────────────────────────────────
+  function getRecommendations(diseases, data) {
+    var html = '';
+    var vec   = diseases.malaria_dengue  || 0;
+    var resp  = diseases.respiratory     || 0;
+    var water = diseases.cholera_typhoid || 0;
+
+    // Vector-borne
+    if (vec >= 70) {
+      html += `<div class="rec-card high">
+        <div class="rec-title">🦟 Malaria/Dengue — High Risk</div>
+        <ul>
+          <li>Use DEET-based mosquito repellent outdoors</li>
+          <li>Sleep under insecticide-treated bed nets</li>
+          <li>Eliminate standing water near your home</li>
+          <li>Wear full-sleeve clothing at dawn/dusk</li>
+          <li>Consult a doctor if fever persists &gt; 2 days</li>
+        </ul></div>`;
+    } else if (vec >= 40) {
+      html += `<div class="rec-card medium">
+        <div class="rec-title">🦟 Malaria/Dengue — Moderate Risk</div>
+        <ul>
+          <li>Use mosquito coils/repellents at home</li>
+          <li>Check for water accumulation in pots/tyres</li>
+          <li>Keep windows screened</li>
+        </ul></div>`;
+    } else {
+      html += `<div class="rec-card low">
+        <div class="rec-title">🦟 Malaria/Dengue — Low Risk</div>
+        <ul><li>Maintain basic mosquito hygiene — no immediate action needed</li></ul>
+      </div>`;
+    }
+
+    // Respiratory
+    if (resp >= 70) {
+      html += `<div class="rec-card high">
+        <div class="rec-title">😷 Respiratory — High Risk (AQI: ${data.aqi})</div>
+        <ul>
+          <li>Wear N95/FFP2 mask outdoors</li>
+          <li>Avoid outdoor exercise and crowded areas</li>
+          <li>Keep inhalers accessible if asthmatic</li>
+          <li>Use air purifiers indoors if available</li>
+          <li>Children &amp; elderly should stay indoors</li>
+        </ul></div>`;
+    } else if (resp >= 40) {
+      html += `<div class="rec-card medium">
+        <div class="rec-title">😷 Respiratory — Moderate Risk (AQI: ${data.aqi})</div>
+        <ul>
+          <li>Wear a surgical mask in heavy traffic areas</li>
+          <li>Limit prolonged outdoor activity</li>
+          <li>Keep windows closed during peak hours</li>
+        </ul></div>`;
+    } else {
+      html += `<div class="rec-card low">
+        <div class="rec-title">😷 Respiratory — Low Risk (AQI: ${data.aqi})</div>
+        <ul><li>Air quality is acceptable — no special precautions needed</li></ul>
+      </div>`;
+    }
+
+    // Water-borne
+    if (water >= 70) {
+      html += `<div class="rec-card high">
+        <div class="rec-title">💧 Cholera/Typhoid — High Risk</div>
+        <ul>
+          <li>Drink only boiled or bottled water</li>
+          <li>Avoid raw/street food entirely</li>
+          <li>Use ORS immediately if diarrhoea occurs</li>
+          <li>Wash hands with soap before every meal</li>
+          <li>Seek vaccination if travelling to affected areas</li>
+        </ul></div>`;
+    } else if (water >= 40) {
+      html += `<div class="rec-card medium">
+        <div class="rec-title">💧 Cholera/Typhoid — Moderate Risk</div>
+        <ul>
+          <li>Prefer boiled/filtered water over tap water</li>
+          <li>Avoid uncovered street food</li>
+          <li>Maintain regular hand hygiene</li>
+        </ul></div>`;
+    } else {
+      html += `<div class="rec-card low">
+        <div class="rec-title">💧 Cholera/Typhoid — Low Risk</div>
+        <ul><li>Normal food and water safety practices are sufficient</li></ul>
+      </div>`;
+    }
+
+    return html;
+  }
+
+  // ── Original functions (unchanged) ──────────────────────────────
+  function runModel() {
+    var btn = document.getElementById('genBtn');
+    var loader = document.getElementById('mapLoader');
+    btn.disabled = true;
+    document.getElementById('statusText').textContent = 'RUNNING MODEL...';
+    loader.classList.add('active');
+    fetch("http://localhost:5000/run_model")
+      .then(r => r.json())
+      .then(() => {
+        document.getElementById('statusText').textContent = 'MODEL COMPLETE';
+        loadRiskMap();
+        loadStats();
+      })
+      .catch(() => { document.getElementById('statusText').textContent = 'ERROR — CHECK SERVER'; })
+      .finally(() => { btn.disabled = false; loader.classList.remove('active'); });
+  }
+
+  function loadRiskMap() {
+    if (riskLayer) map.removeLayer(riskLayer);
+    var lat = parseFloat(document.getElementById('inputLat').value) || 28.6139;
+    var lon = parseFloat(document.getElementById('inputLon').value) || 77.2090;
+    var delta = 0.1;
+    var imageUrl = "http://localhost:5000/risk_map?" + Date.now();
+    riskLayer = L.imageOverlay(imageUrl, [[lat - delta, lon - delta], [lat + delta, lon + delta]], { opacity: 0.75 });
+    riskLayer.addTo(map);
+  }
+
+  function loadStats() {
+    fetch("http://localhost:5000/risk_stats")
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('statHigh').textContent = fmtNum(data.high_risk_pixels);
+        document.getElementById('statMed').textContent  = fmtNum(data.medium_risk_pixels);
+        document.getElementById('statLow').textContent  = fmtNum(data.low_risk_pixels);
+      }).catch(() => {});
+  }
+
+  function fmtNum(n) {
+    if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+    if (n >= 1000) return (n/1000).toFixed(1)+'K';
+    return String(n);
+  }
+
+  function updateRiskDisplay(data) {
+    var prob  = data.probability;
+    var risk  = data.risk;
+    var color = risk === 'HIGH' ? 'var(--danger)' : risk === 'MEDIUM' ? 'var(--warn)' : 'var(--safe)';
+    document.getElementById('riskValue').textContent      = (prob * 100).toFixed(1) + '%';
+    document.getElementById('riskValue').style.color      = color;
+    document.getElementById('riskLabel').textContent      = risk + ' RISK';
+    document.getElementById('riskLabel').style.color      = color;
+    document.getElementById('riskBar').style.width        = (prob * 100) + '%';
+    document.getElementById('riskBar').style.background   = color;
+    document.getElementById('alertBox').textContent       = data.alert;
+    document.getElementById('alertBox').style.borderLeftColor = color;
+  }
+
+  function updateChart(days, values) {
+    document.getElementById('chartEmpty').style.display = 'none';
+    if (chart) chart.destroy();
+    var colors = values.map(v =>
+      v > 0.7 ? 'rgba(255,61,87,0.85)' :
+      v > 0.4 ? 'rgba(255,179,0,0.85)' :
+                'rgba(0,230,118,0.85)'
+    );
+    chart = new Chart(document.getElementById('riskChart'), {
+      type: 'bar',
+      data: {
+        labels: days,
+        datasets: [{
+          label: 'Pathogen Concentration',
+          data: values,
+          backgroundColor: colors,
+          borderColor: colors.map(c => c.replace('0.85','1')),
+          borderWidth: 1,
+          borderRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ' ' + (ctx.raw * 100).toFixed(1) + '% concentration' } }
+        },
+        scales: {
+          y: {
+            min: 0, max: 1,
+            ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 }, callback: v => (v*100).toFixed(0)+'%' },
+            grid: { color: 'rgba(30,45,69,0.8)' }
+          },
+          x: {
+            ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 } },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  function clearAll() {
+    document.getElementById('inputLat').value = '';
+    document.getElementById('inputLon').value = '';
+    document.getElementById('dispLat').textContent = '—';
+    document.getElementById('dispLon').textContent = '—';
+    document.getElementById('riskValue').textContent = '—';
+    document.getElementById('riskValue').style.color = 'var(--dim)';
+    document.getElementById('riskLabel').textContent = 'Enter coordinates or click map';
+    document.getElementById('riskLabel').style.color = 'var(--dim)';
+    document.getElementById('riskBar').style.width = '0%';
+    document.getElementById('alertBox').textContent = 'Awaiting location selection...';
+    document.getElementById('alertBox').style.borderLeftColor = 'var(--dim)';
+    document.getElementById('chartEmpty').style.display = 'flex';
+    document.getElementById('statHigh').textContent = '—';
+    document.getElementById('statMed').textContent  = '—';
+    document.getElementById('statLow').textContent  = '—';
+    document.getElementById('humanContent').innerHTML = '<div class="human-empty">Select a location to load<br>disease risk data</div>';
+    document.getElementById('recsContent').innerHTML  = '<div class="human-empty">Recommendations will appear<br>after location analysis</div>';
+    if (currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
+    if (chart) { chart.destroy(); chart = null; }
+  }
 </script>
 </body>
 </html>
