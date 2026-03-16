@@ -10,9 +10,8 @@ from sklearn.model_selection import train_test_split
 # Download Sentinel Image
 # ---------------------------
 
-def download_satellite():
-
-    point = ee.Geometry.Point([77.2090, 28.6139])
+def download_satellite(lat, lon):
+    point = ee.Geometry.Point([lon, lat])
 
     collection = (
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
@@ -125,11 +124,9 @@ def generate_heatmap(model,features,b2):
 # Run Pipeline
 # ---------------------------
 
-def run_pipeline():
-
+def run_pipeline(lat, lon):
     ee.Initialize(project="pathowatch-vibhav")
-
-    filename = download_satellite()
+    filename = download_satellite(lat, lon)
 
     dataset,b2,b3,b4,b8 = load_bands(filename)
 

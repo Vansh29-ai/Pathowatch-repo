@@ -47,7 +47,9 @@ def home():
 def run_model():
     global model, heatmap
     try:
-        model, heatmap = pathowatch_pipeline.run_pipeline()
+        lat = float(request.args.get("lat", 28.6139))
+        lon = float(request.args.get("lon", 77.2090))
+        model, heatmap = pathowatch_pipeline.run_pipeline(lat, lon)
         return jsonify({"status": "model_run_complete"})
     except Exception as e:
         return jsonify({"status": "error", "detail": str(e)}), 500

@@ -365,6 +365,10 @@
   </div>
 
   <div class="side-panel">
+    <!-- VEGETATION BLOCK HEADER -->
+    <div style="padding: 10px 20px; background: rgba(0,229,255,0.05); border-bottom: 1px solid var(--border); border-top: 1px solid var(--border);">
+      <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase;">🌿 Vegetation Pathogen Detection</span>
+    </div>
 
     <!-- 1. Risk Assessment (original) -->
     <div class="panel-section">
@@ -429,7 +433,12 @@
         </div>
       </div>
     </div>
+    <!-- HUMAN DISEASE BLOCK HEADER -->
+    <div style="padding: 10px 20px; background: rgba(0,230,118,0.05); border-bottom: 1px solid var(--border); border-top: 2px solid var(--border);">
+      <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--safe); text-transform: uppercase;">👤 Human Disease Analysis</span>
+    </div>
 
+    
     <!-- 6. Human Disease Probability Index -->
     <div class="panel-section" id="humanSection">
       <div class="section-title">HUMAN DISEASE PROBABILITY INDEX</div>
@@ -700,7 +709,9 @@
     btn.disabled = true;
     document.getElementById('statusText').textContent = 'RUNNING MODEL...';
     loader.classList.add('active');
-    fetch("http://localhost:5000/run_model")
+    var lat = parseFloat(document.getElementById('inputLat').value) || 28.6139;
+    var lon = parseFloat(document.getElementById('inputLon').value) || 77.2090;
+    fetch(`http://localhost:5000/run_model?lat=${lat}&lon=${lon}`)
       .then(r => r.json())
       .then(() => {
         document.getElementById('statusText').textContent = 'MODEL COMPLETE';
@@ -814,6 +825,8 @@
     document.getElementById('recsContent').innerHTML  = '<div class="human-empty">Recommendations will appear<br>after location analysis</div>';
     if (currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
     if (chart) { chart.destroy(); chart = null; }
+    if (riskLayer) { map.removeLayer(riskLayer); riskLayer = null; }
+    document.getElementById('statusText').textContent = 'SYSTEM READY';
   }
 </script>
 </body>
