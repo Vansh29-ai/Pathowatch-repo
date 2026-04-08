@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.git
+.gitignore
+*.zip
+WhatsApp*
+heatmap.png
+risk_map.png
+sentinel.tif
+*.tiff

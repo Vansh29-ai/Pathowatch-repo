@@ -211,7 +211,6 @@
       color: var(--text); font-weight: 300; min-height: 44px; transition: border-color 0.3s;
     }
 
-    /* ── Disease Probability Panel ── */
     .disease-table {
       width: 100%; border-collapse: collapse;
       font-family: var(--mono); font-size: 11px;
@@ -249,7 +248,6 @@
     .badge-medium { background: rgba(255,179,0,0.15);  color: var(--warn);   border: 1px solid var(--warn);   }
     .badge-low    { background: rgba(0,230,118,0.15);  color: var(--safe);   border: 1px solid var(--safe);   }
 
-    /* ── Recommendations Panel ── */
     .rec-card {
       border-left: 2px solid var(--dim);
       padding: 8px 10px;
@@ -309,15 +307,12 @@
     .empty-state .icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
     .empty-state p { font-size: 12px; letter-spacing: 1px; line-height: 1.8; text-align: center; }
 
-    /* human panel empty state */
     .human-empty {
       text-align: center; padding: 20px 0;
       font-family: var(--mono); font-size: 11px;
       color: var(--dim); letter-spacing: 1px;
     }
-    .leaflet-top.leaflet-left {
-  top: 50px;
-}
+    .leaflet-top.leaflet-left { top: 50px; }
   </style>
 </head>
 <body>
@@ -338,16 +333,39 @@
 </header>
 
 <div class="coord-input-bar">
-  <div class="coord-input-group">
-    <label>Latitude</label>
-    <input class="coord-input" id="inputLat" type="number" step="0.0001" placeholder="e.g. 30.9000" />
+  <div style="display:flex; gap:6px; margin-right:8px;">
+    <button class="btn" id="toggleSearch" onclick="switchMode('search')"
+            style="padding:8px 14px; font-size:10px;">🔍 Search</button>
+    <button class="btn" id="toggleCoords" onclick="switchMode('coords')"
+            style="padding:8px 14px; font-size:10px; opacity:0.4;">📍 Coords</button>
   </div>
+
   <div class="divider"></div>
-  <div class="coord-input-group">
-    <label>Longitude</label>
-    <input class="coord-input" id="inputLon" type="number" step="0.0001" placeholder="e.g. 75.8500" />
+
+  <div id="searchMode" style="display:flex; align-items:center; gap:12px; flex:1;">
+    <div class="coord-input-group" style="flex:1; max-width:400px;">
+      <label>Search Location</label>
+      <input class="coord-input" id="locationSearch" type="text"
+             placeholder="e.g. Delhi, Hamirpur, Mumbai..."
+             style="width:100%;"
+             onkeydown="if(event.key==='Enter') searchLocation()"/>
+    </div>
+    <button class="btn" onclick="searchLocation()">⊕ Search & Analyze</button>
   </div>
-  <button class="btn" onclick="analyzeFromInput()">⊕ Analyze Location</button>
+
+  <div id="coordsMode" style="display:none; align-items:center; gap:12px; flex:1;">
+    <div class="coord-input-group">
+      <label>Latitude</label>
+      <input class="coord-input" id="inputLat" type="number" step="0.0001" placeholder="e.g. 30.9000"/>
+    </div>
+    <div class="divider"></div>
+    <div class="coord-input-group">
+      <label>Longitude</label>
+      <input class="coord-input" id="inputLon" type="number" step="0.0001" placeholder="e.g. 75.8500"/>
+    </div>
+    <button class="btn" onclick="analyzeFromInput()">⊕ Analyze Location</button>
+  </div>
+
   <button class="btn btn-danger" onclick="clearAll()">✕ Clear</button>
   <span class="input-hint">or click directly on map ↓</span>
 </div>
@@ -365,12 +383,10 @@
   </div>
 
   <div class="side-panel">
-    <!-- VEGETATION BLOCK HEADER -->
     <div style="padding: 10px 20px; background: rgba(0,229,255,0.05); border-bottom: 1px solid var(--border); border-top: 1px solid var(--border);">
       <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase;">🌿 Vegetation Pathogen Detection</span>
     </div>
 
-    <!-- 1. Risk Assessment (original) -->
     <div class="panel-section">
       <div class="section-title">VEGETATION RISK ASSESSMENT</div>
       <div class="risk-display">
@@ -382,7 +398,6 @@
       </div>
     </div>
 
-    <!-- 2. Selected Location (original) -->
     <div class="panel-section">
       <div class="section-title">Selected Location</div>
       <div class="coords-display">
@@ -397,13 +412,11 @@
       </div>
     </div>
 
-    <!-- 3. Alert (original) -->
     <div class="panel-section">
       <div class="section-title">Alert</div>
       <div class="alert-box" id="alertBox">Awaiting location selection...</div>
     </div>
 
-    <!-- 4. Weekly Chart -->
     <div class="panel-section" style="flex:1">
       <div class="section-title">Weekly Concentration Trend</div>
       <div class="chart-wrap">
@@ -415,7 +428,6 @@
       </div>
     </div>
 
-    <!-- 5. Risk Distribution (original) -->
     <div class="panel-section">
       <div class="section-title">Risk Distribution</div>
       <div class="stats-grid">
@@ -433,13 +445,11 @@
         </div>
       </div>
     </div>
-    <!-- HUMAN DISEASE BLOCK HEADER -->
+
     <div style="padding: 10px 20px; background: rgba(0,230,118,0.05); border-bottom: 1px solid var(--border); border-top: 2px solid var(--border);">
       <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--safe); text-transform: uppercase;">👤 Human Disease Analysis</span>
     </div>
 
-    
-    <!-- 6. Human Disease Probability Index -->
     <div class="panel-section" id="humanSection">
       <div class="section-title">HUMAN DISEASE PROBABILITY INDEX</div>
       <div id="humanContent">
@@ -447,20 +457,23 @@
       </div>
     </div>
 
-    <!-- 7. Recommendations -->
     <div class="panel-section" id="recsSection">
       <div class="section-title">Recommended Actions</div>
       <div id="recsContent">
         <div class="human-empty">Recommendations will appear<br>after location analysis</div>
       </div>
     </div>
-
-    
-
   </div>
 </div>
 
 <script>
+  // ─────────────────────────────────────────────────────────────────
+  // API BASE URL
+  // Empty string = same origin (works locally AND on Render since
+  // Flask serves index.html from the same server).
+  // ─────────────────────────────────────────────────────────────────
+  var API = "";
+
   var map = L.map('map').setView([28.6139, 77.2090], 11);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -527,10 +540,9 @@
       riskLayer.setBounds([[lat - delta, lon - delta], [lat + delta, lon + delta]]);
     }
 
-    // Fire both requests in parallel
     Promise.all([
-      fetch(`http://localhost:5000/analyze_dynamic_location?lat=${lat}&lon=${lon}`).then(r => r.json()),
-      fetch(`http://localhost:5000/human_risk?lat=${lat}&lon=${lon}`).then(r => r.json())
+      fetch(`${API}/analyze_dynamic_location?lat=${lat}&lon=${lon}`).then(r => r.json()),
+      fetch(`${API}/human_risk?lat=${lat}&lon=${lon}`).then(r => r.json())
     ])
     .then(([veg, human]) => {
       updateRiskDisplay(veg);
@@ -549,25 +561,20 @@
     });
   }
 
-  // ── Human Disease Panel ──────────────────────────────────────────
   function updateHumanPanel(human) {
-    var risk    = human.risk_level || "LOW";
-    var bClass  = risk === "HIGH" ? "badge-high" : risk === "MEDIUM" ? "badge-medium" : "badge-low";
-    var d       = human.diseases || {};
-    var env     = human.data     || {};
-    var ideals  = human.ideals   || {};
+    var risk   = human.risk_level || "LOW";
+    var bClass = risk === "HIGH" ? "badge-high" : risk === "MEDIUM" ? "badge-medium" : "badge-low";
+    var d      = human.diseases || {};
+    var env    = human.data     || {};
+    var ideals = human.ideals   || {};
 
-    function probColor(v) {
-      return v >= 70 ? 'var(--danger)' : v >= 40 ? 'var(--warn)' : 'var(--safe)';
-    }
-    function probBarColor(v) {
-      return v >= 70 ? '#ff3d57' : v >= 40 ? '#ffb300' : '#00e676';
-    }
+    function probColor(v)    { return v >= 70 ? 'var(--danger)' : v >= 40 ? 'var(--warn)' : 'var(--safe)'; }
+    function probBarColor(v) { return v >= 70 ? '#ff3d57'       : v >= 40 ? '#ffb300'     : '#00e676'; }
 
     var rows = [
-      { label: "🦟 Vector (Malaria/Dengue)",    val: d.malaria_dengue  || 0 },
-      { label: "😷 Respiratory (Flu/Asthma)",    val: d.respiratory     || 0 },
-      { label: "💧 Water-borne (Cholera)",        val: d.cholera_typhoid || 0 }
+      { label: "🦟 Vector (Malaria/Dengue)",  val: d.malaria_dengue  || 0 },
+      { label: "😷 Respiratory (Flu/Asthma)", val: d.respiratory     || 0 },
+      { label: "💧 Water-borne (Cholera)",     val: d.cholera_typhoid || 0 }
     ];
 
     var tableRows = rows.map(r => `
@@ -610,108 +617,78 @@
         </div>
       </div>`;
 
-    // Recommendations
     document.getElementById('recsContent').innerHTML = getRecommendations(d, env);
   }
 
-  // ── Recommendations ──────────────────────────────────────────────
   function getRecommendations(diseases, data) {
-    var html = '';
+    var html  = '';
     var vec   = diseases.malaria_dengue  || 0;
     var resp  = diseases.respiratory     || 0;
     var water = diseases.cholera_typhoid || 0;
 
-    // Vector-borne
     if (vec >= 70) {
-      html += `<div class="rec-card high">
-        <div class="rec-title">🦟 Malaria/Dengue — High Risk</div>
-        <ul>
-          <li>Use DEET-based mosquito repellent outdoors</li>
-          <li>Sleep under insecticide-treated bed nets</li>
-          <li>Eliminate standing water near your home</li>
-          <li>Wear full-sleeve clothing at dawn/dusk</li>
-          <li>Consult a doctor if fever persists &gt; 2 days</li>
-        </ul></div>`;
+      html += `<div class="rec-card high"><div class="rec-title">🦟 Malaria/Dengue — High Risk</div><ul>
+        <li>Use DEET-based mosquito repellent outdoors</li>
+        <li>Sleep under insecticide-treated bed nets</li>
+        <li>Eliminate standing water near your home</li>
+        <li>Wear full-sleeve clothing at dawn/dusk</li>
+        <li>Consult a doctor if fever persists &gt; 2 days</li></ul></div>`;
     } else if (vec >= 40) {
-      html += `<div class="rec-card medium">
-        <div class="rec-title">🦟 Malaria/Dengue — Moderate Risk</div>
-        <ul>
-          <li>Use mosquito coils/repellents at home</li>
-          <li>Check for water accumulation in pots/tyres</li>
-          <li>Keep windows screened</li>
-        </ul></div>`;
+      html += `<div class="rec-card medium"><div class="rec-title">🦟 Malaria/Dengue — Moderate Risk</div><ul>
+        <li>Use mosquito coils/repellents at home</li>
+        <li>Check for water accumulation in pots/tyres</li>
+        <li>Keep windows screened</li></ul></div>`;
     } else {
-      html += `<div class="rec-card low">
-        <div class="rec-title">🦟 Malaria/Dengue — Low Risk</div>
-        <ul><li>Maintain basic mosquito hygiene — no immediate action needed</li></ul>
-      </div>`;
+      html += `<div class="rec-card low"><div class="rec-title">🦟 Malaria/Dengue — Low Risk</div><ul>
+        <li>Maintain basic mosquito hygiene — no immediate action needed</li></ul></div>`;
     }
 
-    // Respiratory
     if (resp >= 70) {
-      html += `<div class="rec-card high">
-        <div class="rec-title">😷 Respiratory — High Risk (AQI: ${data.aqi})</div>
-        <ul>
-          <li>Wear N95/FFP2 mask outdoors</li>
-          <li>Avoid outdoor exercise and crowded areas</li>
-          <li>Keep inhalers accessible if asthmatic</li>
-          <li>Use air purifiers indoors if available</li>
-          <li>Children &amp; elderly should stay indoors</li>
-        </ul></div>`;
+      html += `<div class="rec-card high"><div class="rec-title">😷 Respiratory — High Risk (AQI: ${data.aqi})</div><ul>
+        <li>Wear N95/FFP2 mask outdoors</li>
+        <li>Avoid outdoor exercise and crowded areas</li>
+        <li>Keep inhalers accessible if asthmatic</li>
+        <li>Use air purifiers indoors if available</li>
+        <li>Children &amp; elderly should stay indoors</li></ul></div>`;
     } else if (resp >= 40) {
-      html += `<div class="rec-card medium">
-        <div class="rec-title">😷 Respiratory — Moderate Risk (AQI: ${data.aqi})</div>
-        <ul>
-          <li>Wear a surgical mask in heavy traffic areas</li>
-          <li>Limit prolonged outdoor activity</li>
-          <li>Keep windows closed during peak hours</li>
-        </ul></div>`;
+      html += `<div class="rec-card medium"><div class="rec-title">😷 Respiratory — Moderate Risk (AQI: ${data.aqi})</div><ul>
+        <li>Wear a surgical mask in heavy traffic areas</li>
+        <li>Limit prolonged outdoor activity</li>
+        <li>Keep windows closed during peak hours</li></ul></div>`;
     } else {
-      html += `<div class="rec-card low">
-        <div class="rec-title">😷 Respiratory — Low Risk (AQI: ${data.aqi})</div>
-        <ul><li>Air quality is acceptable — no special precautions needed</li></ul>
-      </div>`;
+      html += `<div class="rec-card low"><div class="rec-title">😷 Respiratory — Low Risk (AQI: ${data.aqi})</div><ul>
+        <li>Air quality is acceptable — no special precautions needed</li></ul></div>`;
     }
 
-    // Water-borne
     if (water >= 70) {
-      html += `<div class="rec-card high">
-        <div class="rec-title">💧 Cholera/Typhoid — High Risk</div>
-        <ul>
-          <li>Drink only boiled or bottled water</li>
-          <li>Avoid raw/street food entirely</li>
-          <li>Use ORS immediately if diarrhoea occurs</li>
-          <li>Wash hands with soap before every meal</li>
-          <li>Seek vaccination if travelling to affected areas</li>
-        </ul></div>`;
+      html += `<div class="rec-card high"><div class="rec-title">💧 Cholera/Typhoid — High Risk</div><ul>
+        <li>Drink only boiled or bottled water</li>
+        <li>Avoid raw/street food entirely</li>
+        <li>Use ORS immediately if diarrhoea occurs</li>
+        <li>Wash hands with soap before every meal</li>
+        <li>Seek vaccination if travelling to affected areas</li></ul></div>`;
     } else if (water >= 40) {
-      html += `<div class="rec-card medium">
-        <div class="rec-title">💧 Cholera/Typhoid — Moderate Risk</div>
-        <ul>
-          <li>Prefer boiled/filtered water over tap water</li>
-          <li>Avoid uncovered street food</li>
-          <li>Maintain regular hand hygiene</li>
-        </ul></div>`;
+      html += `<div class="rec-card medium"><div class="rec-title">💧 Cholera/Typhoid — Moderate Risk</div><ul>
+        <li>Prefer boiled/filtered water over tap water</li>
+        <li>Avoid uncovered street food</li>
+        <li>Maintain regular hand hygiene</li></ul></div>`;
     } else {
-      html += `<div class="rec-card low">
-        <div class="rec-title">💧 Cholera/Typhoid — Low Risk</div>
-        <ul><li>Normal food and water safety practices are sufficient</li></ul>
-      </div>`;
+      html += `<div class="rec-card low"><div class="rec-title">💧 Cholera/Typhoid — Low Risk</div><ul>
+        <li>Normal food and water safety practices are sufficient</li></ul></div>`;
     }
 
     return html;
   }
 
-  // ── Original functions (unchanged) ──────────────────────────────
   function runModel() {
-    var btn = document.getElementById('genBtn');
+    var btn    = document.getElementById('genBtn');
     var loader = document.getElementById('mapLoader');
     btn.disabled = true;
     document.getElementById('statusText').textContent = 'RUNNING MODEL...';
     loader.classList.add('active');
     var lat = parseFloat(document.getElementById('inputLat').value) || 28.6139;
     var lon = parseFloat(document.getElementById('inputLon').value) || 77.2090;
-    fetch(`http://localhost:5000/run_model?lat=${lat}&lon=${lon}`)
+    fetch(`${API}/run_model?lat=${lat}&lon=${lon}`)
       .then(r => r.json())
       .then(() => {
         document.getElementById('statusText').textContent = 'MODEL COMPLETE';
@@ -724,16 +701,16 @@
 
   function loadRiskMap() {
     if (riskLayer) map.removeLayer(riskLayer);
-    var lat = parseFloat(document.getElementById('inputLat').value) || 28.6139;
-    var lon = parseFloat(document.getElementById('inputLon').value) || 77.2090;
+    var lat   = parseFloat(document.getElementById('inputLat').value) || 28.6139;
+    var lon   = parseFloat(document.getElementById('inputLon').value) || 77.2090;
     var delta = 0.1;
-    var imageUrl = "http://localhost:5000/risk_map?" + Date.now();
+    var imageUrl = `${API}/risk_map?` + Date.now();
     riskLayer = L.imageOverlay(imageUrl, [[lat - delta, lon - delta], [lat + delta, lon + delta]], { opacity: 0.75 });
     riskLayer.addTo(map);
   }
 
   function loadStats() {
-    fetch("http://localhost:5000/risk_stats")
+    fetch(`${API}/risk_stats`)
       .then(r => r.json())
       .then(data => {
         document.getElementById('statHigh').textContent = fmtNum(data.high_risk_pixels);
@@ -743,8 +720,8 @@
   }
 
   function fmtNum(n) {
-    if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
-    if (n >= 1000) return (n/1000).toFixed(1)+'K';
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000)    return (n / 1000).toFixed(1) + 'K';
     return String(n);
   }
 
@@ -778,7 +755,7 @@
           label: 'Pathogen Concentration',
           data: values,
           backgroundColor: colors,
-          borderColor: colors.map(c => c.replace('0.85','1')),
+          borderColor: colors.map(c => c.replace('0.85', '1')),
           borderWidth: 1,
           borderRadius: 3
         }]
@@ -793,7 +770,7 @@
         scales: {
           y: {
             min: 0, max: 1,
-            ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 }, callback: v => (v*100).toFixed(0)+'%' },
+            ticks: { color: '#4a6080', font: { family: 'Share Tech Mono', size: 10 }, callback: v => (v * 100).toFixed(0) + '%' },
             grid: { color: 'rgba(30,45,69,0.8)' }
           },
           x: {
@@ -805,7 +782,58 @@
     });
   }
 
+  function switchMode(mode) {
+    if (mode === 'search') {
+      document.getElementById('searchMode').style.display  = 'flex';
+      document.getElementById('coordsMode').style.display  = 'none';
+      document.getElementById('toggleSearch').style.opacity = '1';
+      document.getElementById('toggleCoords').style.opacity = '0.4';
+    } else {
+      document.getElementById('searchMode').style.display  = 'none';
+      document.getElementById('coordsMode').style.display  = 'flex';
+      document.getElementById('toggleSearch').style.opacity = '0.4';
+      document.getElementById('toggleCoords').style.opacity = '1';
+    }
+  }
+
+  function searchLocation() {
+    var query = document.getElementById('locationSearch').value.trim();
+    if (!query) {
+      document.getElementById('alertBox').textContent = '⚠ Please enter a location name.';
+      document.getElementById('alertBox').style.borderLeftColor = 'var(--warn)';
+      return;
+    }
+    document.getElementById('alertBox').textContent = 'Searching for ' + query + '...';
+    document.getElementById('alertBox').style.borderLeftColor = 'var(--accent)';
+
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`, {
+      headers: { 'Accept-Language': 'en' }
+    })
+    .then(r => r.json())
+    .then(results => {
+      if (!results || results.length === 0) {
+        document.getElementById('alertBox').textContent = '⚠ Location not found. Try a different name.';
+        document.getElementById('alertBox').style.borderLeftColor = 'var(--danger)';
+        return;
+      }
+      var lat = parseFloat(results[0].lat);
+      var lon = parseFloat(results[0].lon);
+      var displayName = results[0].display_name.split(',')[0];
+      document.getElementById('inputLat').value = lat.toFixed(5);
+      document.getElementById('inputLon').value = lon.toFixed(5);
+      map.flyTo([lat, lon], 12, { duration: 1.5 });
+      document.getElementById('alertBox').textContent = '📍 Found: ' + displayName + ' — analyzing...';
+      document.getElementById('alertBox').style.borderLeftColor = 'var(--safe)';
+      analyzeLocation(lat, lon);
+    })
+    .catch(() => {
+      document.getElementById('alertBox').textContent = '⚠ Search failed. Check your internet connection.';
+      document.getElementById('alertBox').style.borderLeftColor = 'var(--danger)';
+    });
+  }
+
   function clearAll() {
+    document.getElementById('locationSearch').value = '';
     document.getElementById('inputLat').value = '';
     document.getElementById('inputLon').value = '';
     document.getElementById('dispLat').textContent = '—';
@@ -824,8 +852,8 @@
     document.getElementById('humanContent').innerHTML = '<div class="human-empty">Select a location to load<br>disease risk data</div>';
     document.getElementById('recsContent').innerHTML  = '<div class="human-empty">Recommendations will appear<br>after location analysis</div>';
     if (currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
-    if (chart) { chart.destroy(); chart = null; }
-    if (riskLayer) { map.removeLayer(riskLayer); riskLayer = null; }
+    if (chart)         { chart.destroy(); chart = null; }
+    if (riskLayer)     { map.removeLayer(riskLayer); riskLayer = null; }
     document.getElementById('statusText').textContent = 'SYSTEM READY';
   }
 </script>

@@ -1,9 +1,8 @@
 # =============================================================================
-# PathoWatch — Unified Server (merged)
-# Keeps: all original routes + human disease probability index
+# PathoWatch — Unified Server (Docker/Render ready)
 # =============================================================================
 
-from flask import Flask, send_file, jsonify, request
+from flask import Flask, send_file, jsonify, request, send_from_directory
 from flask_cors import CORS
 import pathowatch_pipeline
 import rasterio
@@ -15,21 +14,57 @@ from dotenv import load_dotenv
 
 load_dotenv()
 WEATHER_KEY = os.getenv("OPENWEATHER_KEY")
-WAQI_TOKEN   = os.getenv("WAQI_TOKEN")
+WAQI_TOKEN  = os.getenv("WAQI_TOKEN")
 
-ee.Initialize(project="pathowatch-vibhav")
+# ---------------------------
+# GEE Authentication
+# Locally: uses your cached personal credentials (ee auth login)
+# On Render: uses GEE_KEY_JSON + GEE_SERVICE_ACCOUNT env vars
+# ---------------------------
+def init_gee():
+    key_json = os.getenv("GEE_KEY_JSON")
+    if key_json:
+        credentials = ee.ServiceAccountCredentials(
+            email=os.getenv("GEE_SERVICE_ACCOUNT"),
+            key_data=key_json
+        )
+        ee.Initialize(credentials, project="pathowatch-vibhav-492519")
+        print("[GEE] Initialized with service account")
+    else:
+        ee.Initialize(project="pathowatch-vibhav-492519")
+        print("[GEE] Initialized with local credentials")
 
-app = Flask(__name__)
+init_gee()
+
+# ---------------------------
+# Flask App
+# static_folder="." lets Flask serve index.html from the same directory
+# ---------------------------
+app = Flask(__name__, static_folder=".")
 CORS(app)
 
 model   = None
 heatmap = None
 
 # ---------------------------
-# Home
+# Serve Frontend (index.html)
 # ---------------------------
 @app.route("/")
-def home():
+def index():
+    return send_from_directory(".", "index.html")
+
+# ---------------------------
+# Health Check
+# ---------------------------
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
+
+# ---------------------------
+# API Info
+# ---------------------------
+@app.route("/api")
+def api_info():
     return jsonify({
         "message": "PathoWatch Unified API",
         "routes": [
@@ -105,8 +140,8 @@ def risk_at_location():
 def hotspots():
     if heatmap is None:
         return jsonify({"error": "Model not run"}), 404
-    points   = np.argwhere(heatmap > 0.75)
-    result   = [{"row": int(r), "col": int(c)} for r, c in points[::500]]
+    points = np.argwhere(heatmap > 0.75)
+    result = [{"row": int(r), "col": int(c)} for r, c in points[::500]]
     return jsonify({"hotspots": result})
 
 # ---------------------------
@@ -132,7 +167,7 @@ def analyze_location():
     else:
         risk, alert = "LOW",    "✅ Area appears safe"
 
-    days   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    days   = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     values = (probability + np.random.normal(0, 0.05, 7)).clip(0, 1)
     return jsonify({"lat": lat, "lon": lon, "probability": probability,
                     "risk": risk, "alert": alert,
@@ -172,14 +207,14 @@ def analyze_dynamic_location():
     else:
         risk, alert = "LOW",    "✅ Area appears safe"
 
-    days   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    days   = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     weekly = (probability + np.random.normal(0, 0.05, 7)).clip(0, 1)
     return jsonify({"lat": lat, "lon": lon, "probability": probability,
                     "risk": risk, "alert": alert,
                     "days": days, "values": weekly.tolist()})
 
 # ---------------------------
-# Human Disease Probability Index  ← YOUR FEATURE
+# Human Disease Probability Index
 # ---------------------------
 @app.route("/human_risk")
 def human_risk():
@@ -244,11 +279,16 @@ def human_risk():
         })
     except Exception as e:
         print(f"[human_risk] {e}")
-        return jsonify({"risk_level": "ERROR",
-                        "data": {"temp":"N/A","aqi":"N/A","humidity":"N/A","weekly_rain":0},
-                        "diseases": {"malaria_dengue":0,"respiratory":0,"cholera_typhoid":0},
-                        "ideals": {"temp":"22-26°C","hum":"40-50%","aqi":"< 50","rain":"< 5mm/week"}
-                        }), 500
+        return jsonify({
+            "risk_level": "ERROR",
+            "data": {"temp": "N/A", "aqi": "N/A", "humidity": "N/A", "weekly_rain": 0},
+            "diseases": {"malaria_dengue": 0, "respiratory": 0, "cholera_typhoid": 0},
+            "ideals": {"temp": "22-26°C", "hum": "40-50%", "aqi": "< 50", "rain": "< 5mm/week"}
+        }), 500
 
+# ---------------------------
+# Entry Point
+# ---------------------------
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
