@@ -1,12 +1,12 @@
 flask
 flask-cors
-rasterio
+gunicorn
 numpy
-scikit-learn
+rasterio
 matplotlib
 scipy
-requests
-python-dotenv
+scikit-learn
 earthengine-api
 geemap
-gunicorn
+requests
+python-dotenv
