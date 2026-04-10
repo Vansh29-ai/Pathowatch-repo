@@ -1,6 +1,6 @@
 # 🦠 PathoWatch — Pathogen Risk Intelligence Platform
 
-> Real-time vegetation pathogen detection and human disease risk analysis using satellite imagery, spectral intelligence, and live environmental data.
+> Real-time vegetation pathogen detection and human disease risk analysis using satellite imagery, spectral intelligence, and live environmental data. 
 
 ---
 
@@ -21,180 +21,238 @@ The core problem is a **lack of early, location-specific risk intelligence**:
 
 PathoWatch is a unified platform that combines:
 
-1. **Satellite-based vegetation pathogen detection**
-2. **Dynamic spectral intelligence using real scientific datasets**
-3. **Human disease risk scoring using live environmental data**
-4. **Actionable recommendations for users**
-
-Users simply select a location → PathoWatch returns:
-
-* Vegetation stress probability
-* Disease risk scores
-* Environmental insights
-* Preventive actions
+1. Satellite-based vegetation pathogen detection
+2. Dynamic spectral intelligence using real scientific datasets
+3. Human disease risk scoring using live environmental data
+4. Actionable recommendations
 
 ---
 
-# 🧠 Major Upgrade — Spectral Intelligence Pipeline (v2)
-
-> ⚡ PathoWatch now uses a **fully dynamic, data-driven pipeline**
+# 🧠 PathoWatch – Complete Workflow (Simplified + Logical Flow)
 
 ---
 
-## 🔄 What Changed
+## 🔷 0. System Initialization (Backend Start)
 
-### ❌ Removed (Old System)
+* Flask server starts
+* `PathogenMonitoringSystem` is initialized
+* Spectral library + detection models are loaded
+
+👉 This prepares the system to process satellite images
+
+---
+
+# 🌍 MAIN WORKFLOW (5-Phase Pipeline)
+
+---
+
+## 🟢 PHASE 1: Data Infrastructure & Spectral Library
+
+### 🎯 Goal:
+
+Create reference “fingerprints” of diseases
+
+### ⚙️ What happens:
+
+* Fetch real spectral data from **USGS library**
+* Generate synthetic pathogen signatures using:
+
+  * Chlorophyll loss
+  * Water stress
+  * Leaf damage
+
+### 📦 Stored Signatures:
+
+* `wheat_rust`
+* `rice_blast`
+* `late_blight`
+* `bacterial_blight`
+
+👉 Each pathogen has unique wavelength behavior
+
+---
+
+## 🟡 PHASE 2: Preprocessing (Cleaning Satellite Data)
+
+### 🎯 Goal:
+
+Make raw satellite data usable
+
+### ⚙️ Steps:
+
+#### 1. Atmospheric Correction
+
+* Removes haze, dust, sunlight distortion
+* Uses **Dark Object Subtraction**
+
+#### 2. Noise Reduction
+
+* Smooth spectral values
+* Spatial filtering (Gaussian)
+
+#### 3. Dimensionality Reduction
+
+* Uses **PCA**
+* Reduces hundreds of bands → important features
+
+#### 4. Feature Extraction
+
+Calculates indices:
+
+* NDVI (vegetation health)
+* NDWI (water stress)
+* NDRE (disease stress)
+
+👉 Converts raw image → meaningful scientific data
+
+---
+
+## 🔵 PHASE 3: Detection (Core Intelligence)
+
+### 🎯 Goal:
+
+Detect disease patterns in pixels
+
+### ⚙️ Techniques Used:
+
+### 🧩 A. Spectral Angle Mapper (SAM)
+
+* Compares pixel spectrum with pathogen signature
+* Measures similarity (0 → 1)
+
+👉 If similar → possible disease
+
+---
+
+### 🧠 B. 3D CNN (Deep Learning)
+
+Uses:
+
+* Spatial info (image)
+* Spectral info (bands)
+
+👉 Learns patterns automatically
+
+---
+
+### 🔁 Hybrid Approach
+
+* SAM → initial detection
+* CNN → refinement
+
+👉 Combines physics + AI
+
+---
+
+## 🟠 PHASE 4: Prediction & Monitoring
+
+### 🎯 Goal:
+
+Generate disease risk maps
+
+### ⚙️ Steps:
+
+* Process hyperspectral image
+* Create similarity maps (per pathogen)
+
+### 📊 Risk Levels:
+
+* 🔴 High risk (> 0.7)
+* 🟡 Medium (0.4 – 0.7)
+* 🟢 Low (< 0.4)
+
+### 📦 Stored Outputs:
+
+* Risk maps (PNG)
+* Statistics
+* Trends
+
+👉 Output = visual + numerical insights
+
+---
+
+## 🔴 PHASE 5: Validation & Quality Control
+
+### 🎯 Goal:
+
+Ensure reliability
+
+### ⚙️ Metrics:
+
+* Spatial coherence
+* Signal-to-noise ratio (SNR)
+* Statistical consistency
+
+### 🧠 Output:
+
+* Quality score
+* Recommendations:
+
+  * Improve data
+  * Increase resolution
+  * Reduce noise
+
+👉 Prevents false detections
+
+---
+
+# 🔄 ADDITIONAL PIPELINE (Advanced ML Version)
+
+### ⚙️ Enhancements:
+
+* SAM → generates training labels
+* Feature extraction + PCA
+* Train models:
+
+  * Random Forest
+  * SVM
+* Ensemble prediction
+
+👉 More accurate + adaptive system
+
+---
+
+# 🧬 Major Upgrade — Spectral Intelligence Pipeline (v2)
+
+## ❌ Removed (Old System)
 
 * Hardcoded spectral dictionaries
 * Fixed wavelength arrays
 * Static thresholds
-* Limited feature extraction
 * SAM-only detection
-* Fixed disease targets
 
 ---
 
-### ✅ Added (New System)
+## ✅ Added (New System)
 
-* 🌐 Real **USGS spectral library integration**
-* 📡 **Dynamic wavelength extraction**
-* 📊 **Statistical thresholding (per image)**
-* 🧠 **Adaptive feature engineering**
-* 🤖 **Hybrid ML pipeline (RF + SVM)**
-* ⚙️ **Runtime configurable targets**
+* 🌐 USGS spectral integration
+* 📡 Dynamic wavelength extraction
+* 📊 Adaptive thresholding
+* 🤖 Hybrid ML (RF + SVM)
+* ⚙️ Configurable targets
 
 ---
 
-## 🧬 New Pipeline Flow
+## 🧬 Pipeline Flow
 
 ```
-Input Raster (Sentinel / PRISMA / Hyperspectral)
-        │
-        ▼
-Extract Wavelengths (metadata-driven)
-        │
-        ▼
-Fetch USGS Reference Spectrum
-        │
-        ▼
-Spectral Matching (SAM)
-        │
-        ▼
+Input Raster
+   ↓
+Extract Wavelengths
+   ↓
+Fetch USGS Spectrum
+   ↓
+SAM Matching
+   ↓
 Dynamic Thresholding
-        │
-        ▼
-Feature Extraction (adaptive)
-        │
-        ▼
-ML Training (RF + SVM)
-        │
-        ▼
+   ↓
+Feature Extraction
+   ↓
+ML Training
+   ↓
 Ensemble Prediction
-        │
-        ▼
-Risk Map + Stats + Evaluation
-```
-
----
-
-## 📡 Core Components
-
-### 1. `fetch_usgs_spectrum()`
-
-* Downloads real spectral data from USGS splib07
-* Converts µm → nm
-* Caches locally (.npz)
-* Falls back to literature if offline
-
----
-
-### 2. `extract_wavelengths_from_raster()`
-
-* Reads wavelengths directly from raster metadata
-* Works with Sentinel-2, PRISMA, and hyperspectral data
-* Fallback: interpolation if metadata missing
-
----
-
-### 3. `extract_spectral_features()`
-
-Dynamic feature builder:
-
-* NDVI, NDWI, NDII, EVI, NBR, RECl
-* Mean, variance, spectral slope
-* Raw band intensities
-
-✔ Automatically adapts to band count
-
----
-
-### 4. `build_training_labels()`
-
-* Uses percentile-based thresholds
-* Derived from SAM similarity distribution
-* No hardcoded values
-
----
-
-### 5. ML Pipeline (Upgraded 🚀)
-
-#### Step 1 — SAM (Spectral Matching)
-
-* Measures similarity between pixel and reference spectrum
-
-#### Step 2 — ML Ensemble
-
-| Model                     | Role                        |
-| ------------------------- | --------------------------- |
-| Random Forest (300 trees) | Nonlinear learning          |
-| SVM (RBF kernel)          | High-dimensional separation |
-
-**Final Prediction:**
-
-```
-Final Probability = (RF + SVM) / 2
-```
-
----
-
-### 6. `evaluate_model()`
-
-Outputs:
-
-* Accuracy
-* Precision / Recall / F1
-* Full classification report
-
----
-
-### 7. `run_pipeline_custom(target)`
-
-🔥 Fully configurable system:
-
-```python
-run_pipeline_custom("vegetation_stress")
-run_pipeline_custom("algal_bloom")
-run_pipeline_custom("soil_moisture")
-```
-
----
-
-## 🌍 How It Works
-
-```
-User selects location
-        │
-        ▼
-Backend (Flask)
-   │
-   ├── Vegetation Engine (Satellite + ML)
-   └── Human Risk Engine (Weather + AQI)
-        │
-        ▼
-Risk Scores + Recommendations
-        │
-        ▼
-Interactive Dashboard
+   ↓
+Risk Map Output
 ```
 
 ---
@@ -238,41 +296,6 @@ Pathowatch-repo/
 
 ---
 
-## 📊 Features
-
-* 🌍 Interactive map
-* 📡 Real-time satellite analysis
-* 📈 Weekly trends
-* 🧠 ML-powered detection
-* 🌫️ AQI + weather integration
-* ⚠️ Risk alerts + recommendations
-* 🌙 Dark mode UI
-
----
-
-## 📡 API Routes
-
-| Route                     | Description             |
-| ------------------------- | ----------------------- |
-| /analyze_dynamic_location | Satellite NDVI analysis |
-| /human_risk               | Disease risk scoring    |
-| /run_model                | Full ML pipeline        |
-| /risk_map                 | Heatmap output          |
-| /risk_stats               | Statistics              |
-
----
-
-## ⚙️ Environment Variables
-
-```env
-OPENWEATHER_KEY=your_key
-WAQI_TOKEN=your_token
-GEE_SERVICE_ACCOUNT=your_account
-GEE_KEY_JSON={...}
-```
-
----
-
 ## 🚀 Running Locally
 
 ### Python
@@ -281,8 +304,6 @@ GEE_KEY_JSON={...}
 pip install -r requirements.txt
 python server.py
 ```
-
----
 
 ### Docker
 
@@ -302,60 +323,12 @@ docker run --env-file .env -p 8080:8080 pathowatch
 
 ---
 
-## 🧠 Why This Upgrade Matters
-
-### Old System
-
-* Not scalable
-* Not robust
-* Sensor-dependent
-
----
-
-### New System
-
-* ✅ Sensor-agnostic
-* ✅ Research-grade
-* ✅ Data-driven
-* ✅ Extensible
-* ✅ ML-enhanced
-
----
-
-## 📊 Old vs New
-
-| Feature     | Old       | New          |
-| ----------- | --------- | ------------ |
-| Spectra     | Hardcoded | USGS         |
-| Wavelengths | Fixed     | Dynamic      |
-| Thresholds  | Static    | Adaptive     |
-| Features    | Limited   | Dynamic      |
-| Detection   | SAM       | SAM + ML     |
-| Targets     | Fixed     | Configurable |
-
----
-
 ## 🚀 Future Scope
 
-* Hyperspectral drone integration
+* Hyperspectral drones
 * Deep learning models
-* Global-scale disease mapping
-* Mobile deployment
-* Real-time streaming
-
----
-
-## 🧪 Research-Grade Platform
-
-PathoWatch is now:
-
-> 🎓 Scalable • Reproducible • Sensor-agnostic • Scientifically grounded
-
----
-
-## 🙌 Team
-
-Built for **PathoWatch**
+* Global disease tracking
+* Mobile app
 
 ---
 
