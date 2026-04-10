@@ -1,12 +1,79 @@
+# Flask web framework
 flask
 flask-cors
 gunicorn
+
+# Core scientific computing
 numpy
-rasterio
-matplotlib
 scipy
+pandas
+
+# Geospatial and raster data processing
+rasterio
+fiona
+geopandas
+
+# Machine learning and deep learning
 scikit-learn
+tensorflow
+keras
+
+# Image processing and visualization  
+matplotlib
+Pillow
+opencv-python
+
+# Spectral analysis libraries
+spectral
+
+# Satellite data access
 earthengine-api
 geemap
+
+# HTTP requests and web scraping
 requests
+urllib3
+
+# Data persistence and serialization
+joblib
+
+# Environment and configuration
 python-dotenv
+
+# Mathematical optimization
+cvxpy
+
+# Signal processing (for spectral smoothing)
+pywavelets
+
+# Statistical analysis
+statsmodels
+
+# Progress bars and utilities
+tqdm
+
+# Date and time handling
+python-dateutil
+
+# Multiprocessing utilities
+pathos
+
+# HDF5 support (for some satellite formats)
+h5py
+
+# Network communication
+psutil
+
+# Logging and monitoring
+loguru
+
+# Testing (optional but recommended)
+pytest
+pytest-cov
+
+# Development utilities
+jupyter
+ipykernel
+
+# Additional spectral libraries
+pysptools
